@@ -1,10 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
-	"github.com/loganwishartcraig/go-exif/parser"
+	exif "github.com/loganwishartcraig/go-exif/exif/reader"
 	"github.com/loganwishartcraig/go-exif/reader/jpeg"
 )
 
@@ -27,10 +28,12 @@ func main() {
 	appMarker, err := reader.LoadApp1Marker()
 	check(err)
 
-	exifParser, err := parser.NewBasicExifReader(appMarker)
+	exifReader, err := exif.NewBasicExifReader(appMarker)
 	check(err)
 
-	_, err = exifParser.ParseAll()
-	check(err)
+	fmt.Println(exifReader)
+
+	// _, err = exifParser.ParseAll()
+	// check(err)
 
 }

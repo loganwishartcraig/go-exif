@@ -1,49 +1,42 @@
 package tags
 
-import "github.com/loganwishartcraig/go-exif/ifd"
-
-type ExifTag struct {
-	Field ifd.IfdField
-	Value interface{}
-}
-
-type ExifTagId uint16
+type TagId uint16
 
 const (
 
 	// TIFF Tags
-	ImageWidth                  ExifTagId = 0x100
-	ImageLength                           = 0x101
-	BitsPerSample                         = 0x102
-	Compression                           = 0x103
-	PhotometricInterpretation             = 0x106
-	ImageDescription                      = 0x10E
-	Make                                  = 0x10F
-	Model                                 = 0x110
-	StripOffsets                          = 0x111
-	Orientation                           = 0x112
-	SamplesPerPixel                       = 0x115
-	RowsPerStrip                          = 0x116
-	StripByteCounts                       = 0x117
-	XResolution                           = 0x11A
-	YResolution                           = 0x11B
-	PlanarConfiguration                   = 0x11C
-	ResolutionUnit                        = 0x128
-	TransferFunction                      = 0x12D
-	Software                              = 0x131
-	DateTime                              = 0x132
-	Artist                                = 0x13B
-	WhitePoint                            = 0x13E
-	PrimaryChromaticities                 = 0x13F
-	JpegInterchangeFormat                 = 0x201
-	JpegInterchangeFormatLength           = 0x202
-	YCbCrCoefficients                     = 0x211
-	YCbCrSubSampling                      = 0x212
-	YCbCrPositioning                      = 0x213
-	ReferenceBlackWhite                   = 0x214
-	Copyright                             = 0x8298 // Going to require special processing
-	ExifIfdPointer                        = 0x8769
-	GpsInfoIfdPointer                     = 0x8825
+	ImageWidth                  TagId = 0x100
+	ImageLength                       = 0x101
+	BitsPerSample                     = 0x102
+	Compression                       = 0x103
+	PhotometricInterpretation         = 0x106
+	ImageDescription                  = 0x10E
+	Make                              = 0x10F
+	Model                             = 0x110
+	StripOffsets                      = 0x111
+	Orientation                       = 0x112
+	SamplesPerPixel                   = 0x115
+	RowsPerStrip                      = 0x116
+	StripByteCounts                   = 0x117
+	XResolution                       = 0x11A
+	YResolution                       = 0x11B
+	PlanarConfiguration               = 0x11C
+	ResolutionUnit                    = 0x128
+	TransferFunction                  = 0x12D
+	Software                          = 0x131
+	DateTime                          = 0x132
+	Artist                            = 0x13B
+	WhitePoint                        = 0x13E
+	PrimaryChromaticities             = 0x13F
+	JpegInterchangeFormat             = 0x201
+	JpegInterchangeFormatLength       = 0x202
+	YCbCrCoefficients                 = 0x211
+	YCbCrSubSampling                  = 0x212
+	YCbCrPositioning                  = 0x213
+	ReferenceBlackWhite               = 0x214
+	Copyright                         = 0x8298 // Going to require special processing
+	ExifIfdPointer                    = 0x8769
+	GpsInfoIfdPointer                 = 0x8825
 
 	// Exif Private Tags
 	ExposureTime               = 0x829A

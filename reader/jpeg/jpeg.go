@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/loganwishartcraig/go-exif/ifd"
+	"github.com/loganwishartcraig/go-exif/ifd/field"
 	"github.com/loganwishartcraig/go-exif/marker"
 )
 
@@ -81,7 +81,7 @@ func (r *JpegReader) LoadApp1Marker() (*marker.Marker, error) {
 		return nil, err
 	}
 
-	if bytes.Equal(appMarker.Id, ifd.AppMarker1Id) {
+	if bytes.Equal(appMarker.Id, field.AppMarker1Id) {
 		return appMarker, nil
 	}
 
@@ -92,7 +92,7 @@ func (r *JpegReader) LoadApp1Marker() (*marker.Marker, error) {
 		return nil, err
 	}
 
-	if bytes.Equal(appMarker.Id, ifd.AppMarker1Id) {
+	if bytes.Equal(appMarker.Id, field.AppMarker1Id) {
 		return appMarker, nil
 	}
 

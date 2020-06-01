@@ -1,6 +1,7 @@
 package marker
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -8,10 +9,15 @@ import (
 )
 
 type Marker struct {
-	Id       []byte
-	Length   uint16
-	Offset   int64
-	Contents []byte
+	Id     []byte
+	Length uint16
+	Offset int64
+	reader *bytes.Reader
+}
+
+type Reader interface {
+	Read(b []byte) (int, error)
+	ReadAt(b []byte, offset int64) (int, error)
 }
 
 func NewMarker(f *os.File, offset int64) (*Marker, error) {
@@ -36,11 +42,13 @@ func NewMarker(f *os.File, offset int64) (*Marker, error) {
 		return nil, err
 	}
 
+	reader := bytes.NewReader(markerContents)
+
 	return &Marker{
 		id,
 		length,
 		offset,
-		markerContents,
+		reader,
 	}, nil
 
 }
@@ -57,4 +65,12 @@ func isValidAppMarkerId(bytePair []byte) bool {
 
 func (m *Marker) String() string {
 	return fmt.Sprintf("Marker: <0x%x> - length %d - offset %d", m.Id, m.Length, m.Offset)
+}
+
+func (m *Marker) Read(b []byte) (int, error) {
+	return m.reader.Read(b)
+}
+
+func (m *Marker) ReadAt(b []byte, offset int64) (int, error) {
+	return m.reader.ReadAt(b, offset)
 }
