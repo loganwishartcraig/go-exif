@@ -18,6 +18,7 @@ type Marker struct {
 type Reader interface {
 	Read(b []byte) (int, error)
 	ReadAt(b []byte, offset int64) (int, error)
+	Seek(offset int64, whence int) (int64, error)
 }
 
 func NewMarker(f *os.File, offset int64) (*Marker, error) {
@@ -73,4 +74,8 @@ func (m *Marker) Read(b []byte) (int, error) {
 
 func (m *Marker) ReadAt(b []byte, offset int64) (int, error) {
 	return m.reader.ReadAt(b, offset)
+}
+
+func (m *Marker) Seek(offset int64, whence int) (int64, error) {
+	return m.reader.Seek(offset, whence)
 }

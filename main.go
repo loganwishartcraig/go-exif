@@ -6,6 +6,7 @@ import (
 	"os"
 
 	exif "github.com/loganwishartcraig/go-exif/exif/reader"
+	"github.com/loganwishartcraig/go-exif/ifd"
 	"github.com/loganwishartcraig/go-exif/reader/jpeg"
 )
 
@@ -33,6 +34,10 @@ func main() {
 
 	fmt.Println(exifReader)
 
+	ifdField, err := ifd.NewIfd(exifReader, exifReader.ByteOrder)
+	check(err)
+
+	fmt.Println(ifdField)
 	// _, err = exifParser.ParseAll()
 	// check(err)
 

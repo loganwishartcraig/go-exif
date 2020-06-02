@@ -1,8 +1,9 @@
 package ifd
 
 import (
+	"bytes"
 	"encoding/binary"
-	"errors"
+	"fmt"
 
 	exif "github.com/loganwishartcraig/go-exif/exif/reader"
 )
@@ -10,12 +11,11 @@ import (
 // Image File Directory (ifd)
 type Ifd struct {
 	FieldCount uint16
-	Contents   []byte
-	BaseOffset uint32
 	NextOffset uint32
 	ByteOrder  binary.ByteOrder
 
-	fieldSize uint16
+	contentReader *bytes.Reader
+	fieldSize     uint16
 }
 
 const (
@@ -25,48 +25,41 @@ const (
 	nextOffsetFieldSize = 2
 )
 
-func NewIfd(reader exif.Reader, byteOrder binary.ByteOrder, baseOffset uint32) (*Ifd, error) {
+func NewIfd(reader exif.Reader, byteOrder binary.ByteOrder) (*Ifd, error) {
 
-	return nil, errors.New("Not impelemented")
+	var fieldCount uint16
 
-	// length := len(b)
+	fmt.Println("Need to seek to beginning of reader")
 
-	// if length < 6 {
-	// 	return nil, errors.New("Invalid Ifd length")
-	// }
+	if err := binary.Read(reader, byteOrder, &fieldCount); err != nil {
+		return nil, err
+	}
 
-	// fcReader := bytes.NewReader(b[0:2])
+	contentBuffer := make([]byte, fieldCount*defaultFieldSize)
 
-	// var fieldCount uint16 = 0
-	// var nextOffset uint32 = 0
+	if _, err := reader.Read(contentBuffer); err != nil {
+		return nil, err
+	}
 
-	// if err := binary.Read(fcReader, byteOrder, &fieldCount); err != nil {
-	// 	return nil, err
-	// }
+	var nextOffset uint32
 
-	// endOfContentOffset := (fieldCount * defaultFieldSize)
-	// content := b[2:endOfContentOffset]
-	// nextOffsetReader := bytes.NewReader(b[endOfContentOffset : endOfContentOffset+4])
+	if err := binary.Read(reader, byteOrder, &nextOffset); err != nil {
+		return nil, err
+	}
 
-	// fmt.Printf("Content %x\n", content)
-
-	// if err := binary.Read(nextOffsetReader, byteOrder, &nextOffset); err != nil {
-	// 	return nil, err
-	// }
-
-	// return &Ifd{
-	// 	fieldCount,
-	// 	content,
-	// 	baseOffset,
-	// 	nextOffset,
-	// 	defaultFieldSize,
-	// }, nil
+	return &Ifd{
+		fieldCount,
+		nextOffset,
+		byteOrder,
+		bytes.NewReader(contentBuffer),
+		defaultFieldSize,
+	}, nil
 
 }
 
-// func (ifd *Ifd) String() string {
-// 	return fmt.Sprintf("Ifd - Count %d", ifd.FieldCount)
-// }
+func (ifd *Ifd) String() string {
+	return fmt.Sprintf("Ifd - Count %d", ifd.FieldCount)
+}
 
 // func (ifd *Ifd) LoadField(index uint16, byteOrder binary.ByteOrder) (*IfdField, error) {
 
