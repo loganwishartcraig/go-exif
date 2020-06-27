@@ -33,7 +33,7 @@ const (
 type BasicExifReader struct {
 	markerReader    marker.Reader
 	ByteOrder       binary.ByteOrder
-	zerothIfdOffset int64
+	ZerothIfdOffset int64
 }
 
 func NewBasicExifReader(m *marker.Marker) (*BasicExifReader, error) {
@@ -123,16 +123,15 @@ func parseZerothIfdOffset(m *marker.Marker, byteOrder binary.ByteOrder) (int64, 
 }
 
 func (r *BasicExifReader) String() string {
-	return fmt.Sprintf("ExifReader - 0th ID offset <0x%x>", r.zerothIfdOffset)
+	return fmt.Sprintf("ExifReader - 0th ID offset <0x%x>", r.ZerothIfdOffset)
 }
 
 func (r *BasicExifReader) Read(b []byte) (int, error) {
-	return r.markerReader.ReadAt(b, r.zerothIfdOffset)
+	return r.markerReader.Read(b)
 }
 
 func (r *BasicExifReader) ReadAt(b []byte, offset int64) (int, error) {
-	fmt.Println("WARN - Need to make sure negative offsets work correctly")
-	return r.markerReader.ReadAt(b, r.zerothIfdOffset+offset)
+	return r.markerReader.ReadAt(b, offset)
 }
 
 func (r *BasicExifReader) Seek(offset int64, whence int) (int64, error) {

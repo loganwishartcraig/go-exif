@@ -37,11 +37,15 @@ func NewMarker(f *os.File, offset int64) (*Marker, error) {
 		return nil, errors.New(fmt.Sprintf("Invalid AppMarker ID <0x%x> at given offset %d", id, offset))
 	}
 
-	markerContents := make([]byte, (int)(length)-len(lengthBytes))
+	markerContents := make([]byte, int(length)-len(lengthBytes))
+	markerContentOffset := offset + int64(len(markerMeta))
 
-	if _, err := f.ReadAt(markerContents, offset+(int64)(len(markerMeta))); err != nil {
+	if _, err := f.ReadAt(markerContents, markerContentOffset); err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("Marker offset: <0x%x>\n", markerContentOffset)
+	fmt.Printf("First bytes preview: <0x%x>\n", markerContents[0:10])
 
 	reader := bytes.NewReader(markerContents)
 
@@ -65,7 +69,7 @@ func isValidAppMarkerId(bytePair []byte) bool {
 }
 
 func (m *Marker) String() string {
-	return fmt.Sprintf("Marker: <0x%x> - length %d - offset %d", m.Id, m.Length, m.Offset)
+	return fmt.Sprintf("Marker: <0x%x> - length %d - offset <0x%x>", m.Id, m.Length, m.Offset)
 }
 
 func (m *Marker) Read(b []byte) (int, error) {

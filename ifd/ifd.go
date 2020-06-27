@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 
 	exif "github.com/loganwishartcraig/go-exif/exif/reader"
+	"github.com/loganwishartcraig/go-exif/ifd/tags"
 )
 
 // Image File Directory (ifd)
@@ -16,26 +18,58 @@ type Ifd struct {
 
 	contentReader *bytes.Reader
 	fieldSize     uint16
+
+	// TODO: implement
+	fields map[tags.TagId]*Field
+	// fields field.Field[] - basic field information, DOES NOT include value.
+	// Then can have interface FieldReader { Read(field: Field, valueContent: []byte, interface{}) }
+}
+
+type Reader interface {
+	Read(b []byte) (int, error)
+	ReadAt(b []byte, offset int64) (int, error)
+	ReadField(b []byte, tagId tags.TagId) error
+	Seek(offset int64, whence int) (int64, error)
+}
+
+type IfdFieldType uint16
+
+const (
+	Byte      IfdFieldType = 1
+	Ascii                  = 2
+	Short                  = 3
+	Long                   = 4
+	Rational               = 5
+	Undefined              = 7
+	SLong                  = 9
+	SRational              = 10
+)
+
+type Field struct {
+	TagId       tags.TagId
+	Type        IfdFieldType
+	Count       uint32
+	ValueOffset uint32
 }
 
 const (
-	defaultFieldSize uint16 = 12
+	FieldSize uint16 = 12
 
 	fieldCountFieldSize = 2
 	nextOffsetFieldSize = 2
 )
 
-func NewIfd(reader exif.Reader, byteOrder binary.ByteOrder) (*Ifd, error) {
+func NewIfd(reader exif.Reader, byteOrder binary.ByteOrder, offset int64) (*Ifd, error) {
 
 	var fieldCount uint16
 
-	fmt.Println("Need to seek to beginning of reader")
+	reader.Seek(offset, 0)
 
 	if err := binary.Read(reader, byteOrder, &fieldCount); err != nil {
 		return nil, err
 	}
 
-	contentBuffer := make([]byte, fieldCount*defaultFieldSize)
+	contentBuffer := make([]byte, fieldCount*FieldSize)
 
 	if _, err := reader.Read(contentBuffer); err != nil {
 		return nil, err
@@ -47,176 +81,68 @@ func NewIfd(reader exif.Reader, byteOrder binary.ByteOrder) (*Ifd, error) {
 		return nil, err
 	}
 
+	contentReader := bytes.NewReader(contentBuffer)
+	fields := make(map[tags.TagId]*Field)
+
+	// TODO: Extract this into goroutine?
+	for i := uint16(0); i < fieldCount; i++ {
+		field, err := NewField(contentReader, byteOrder, int64(i*FieldSize))
+		if err != nil {
+			return nil, err
+		}
+		fields[field.TagId] = field
+		fmt.Println(field)
+		test := make([]byte, field.Count)
+		reader.ReadAt(test, int64(field.ValueOffset+6))
+		fmt.Printf("Test data output: %s\n\n", test)
+	}
+
 	return &Ifd{
 		fieldCount,
 		nextOffset,
 		byteOrder,
-		bytes.NewReader(contentBuffer),
-		defaultFieldSize,
+		contentReader,
+		FieldSize,
+		fields,
 	}, nil
 
 }
 
 func (ifd *Ifd) String() string {
-	return fmt.Sprintf("Ifd - Count %d", ifd.FieldCount)
+	contentPreview := make([]byte, 25)
+	n, err := ifd.contentReader.Read(contentPreview)
+	if err != nil {
+		ifd.contentReader.Seek(int64(-1*n), 1)
+	}
+	return fmt.Sprintf("Ifd - Count %d - Content Partial (len: %d bytes) <0x%x...> - Next IFD Offset <0x%x>", ifd.FieldCount, ifd.contentReader.Size(), contentPreview, ifd.NextOffset)
 }
 
-// func (ifd *Ifd) LoadField(index uint16, byteOrder binary.ByteOrder) (*IfdField, error) {
+func (ifd *Ifd) Read(b []byte) (int, error) {
+	return ifd.contentReader.Read(b)
+}
+func (ifd *Ifd) ReadAt(b []byte, offset int64) (int, error) {
+	return ifd.contentReader.ReadAt(b, offset)
+}
+func (ifd *Ifd) Seek(offset int64, whence int) (int64, error) {
+	return ifd.contentReader.Seek(offset, whence)
+}
 
-// 	if index > ifd.FieldCount {
-// 		return nil, errors.New(fmt.Sprintf("Index out of bounds [0, %d]. Received %d", ifd.FieldCount-1, index))
-// 	}
+func NewField(r io.ReadSeeker, byteOrder binary.ByteOrder, offset int64) (*Field, error) {
 
-// 	offset := ifd.fieldSize * index
-// 	return NewIfdField(ifd.Content[offset:offset+ifd.fieldSize], byteOrder, ifd.BaseOffset)
+	r.Seek(offset, 0)
 
-// }
+	field := &Field{}
 
-// func (ifd *Ifd) LoadAllFields(byteOrder binary.ByteOrder) ([](*IfdField), error) {
+	err := binary.Read(r, byteOrder, field)
 
-// 	fields := make([](*IfdField), ifd.FieldCount)
+	if err != nil {
+		return nil, err
+	}
 
-// 	var i uint16
+	return field, nil
 
-// 	for i = 0; i < ifd.FieldCount; i++ {
+}
 
-// 		field, err := ifd.LoadField(i, byteOrder)
-
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		fields[i] = field
-
-// 	}
-
-// 	return fields, nil
-
-// }
-
-// var fieldSize = map[IfdFieldType]uint32{
-// 	Byte:      1,
-// 	Ascii:     1,
-// 	Short:     2,
-// 	Long:      4,
-// 	Rational:  8,
-// 	Undefined: 1,
-// 	SLong:     4,
-// 	SRational: 8,
-// }
-
-// var typeLabel = map[IfdFieldType]string{
-// 	Byte:      "Byte",
-// 	Ascii:     "Ascii",
-// 	Short:     "Short",
-// 	Long:      "Long",
-// 	Rational:  "Rational",
-// 	Undefined: "Undefined",
-// 	SLong:     "SLong",
-// 	SRational: "SRational",
-// }
-
-// func NewIfdField(b []byte, byteOrder binary.ByteOrder, offset uint32) (*IfdField, error) {
-
-// 	reader := bytes.NewReader(b)
-// 	rawIfdField := &RawIfdField{}
-
-// 	if err := binary.Read(reader, byteOrder, rawIfdField); err != nil {
-// 		return nil, err
-// 	}
-
-// 	fmt.Println("NewIfdField - Should validate field type")
-
-// 	size, sizeInMap := fieldSize[rawIfdField.Type]
-// 	typeLabel, typeLabelInMap := typeLabel[rawIfdField.Type]
-
-// 	if !sizeInMap {
-// 		size = 1
-// 	}
-// 	if !typeLabelInMap {
-// 		typeLabel = "UNKNOWN"
-// 	}
-
-// 	return &IfdField{
-// 		TagId:       rawIfdField.TagId,
-// 		Type:        rawIfdField.Type,
-// 		TypeLabel:   typeLabel,
-// 		Count:       rawIfdField.Count,
-// 		Size:        rawIfdField.Count * size,
-// 		Offset:      offset,
-// 		ValueOffset: rawIfdField.ValueOffset,
-// 	}, nil
-
-// }
-
-// func (field *IfdField) String() string {
-// 	return fmt.Sprintf("IfdField \t ID <0x%x> \t %s x %d \t ValueOffset <0x%x>", field.TagId, field.TypeLabel, field.Count, field.ValueOffset)
-// }
-
-// func (field *IfdField) NewValueBuffer() IfdFieldValue {
-
-// 	switch field.Type {
-// 	case Byte:
-// 		if field.Count > 1 {
-// 			return make([]byte, field.Count)
-// 		} else {
-// 			return new(byte)
-// 		}
-// 	case Ascii:
-// 		return new(string)
-// 	case Short:
-// 		if field.Count > 1 {
-// 			return make([]uint16, field.Count)
-// 		} else {
-// 			return new(uint16)
-// 		}
-// 	case Long:
-// 		if field.Count > 1 {
-// 			return make([]uint32, field.Count)
-// 		} else {
-// 			return new(uint32)
-// 		}
-// 	case Rational:
-// 		if field.Count > 1 {
-// 			return make([]float64, field.Count)
-// 		} else {
-// 			return new(float64)
-// 		}
-// 	case Undefined:
-// 		if field.Count > 1 {
-// 			return make([]byte, field.Count)
-// 		} else {
-// 			return new(byte)
-// 		}
-// 	case SLong:
-// 		if field.Count > 1 {
-// 			return make([]int32, field.Count)
-// 		} else {
-// 			return new(int32)
-// 		}
-// 	case SRational:
-// 		if field.Count > 1 {
-// 			return make([]float64, field.Count)
-// 		} else {
-// 			return new(float64)
-// 		}
-// 	default:
-// 		if field.Count > 1 {
-// 			return make([]byte, field.Count)
-// 		} else {
-// 			return new(byte)
-// 		}
-// 	}
-
-// }
-
-// func (field *IfdField) Marshal(valueBuf *IfdFieldValue) error {
-
-// 	valueStart := field.Offset + field.ValueOffset
-
-// 	rawValueBytes = field.
-
-// 	// WANT TO SPLIT THE IfdField into seperate types that implement
-// 	// a common interface
-
-// }
+func (f *Field) String() string {
+	return fmt.Sprintf("Ifd.Field: Tag <0x%x>\tType %d\tCount %d\tValueOffset <0x%x>", f.TagId, f.Type, f.Count, f.ValueOffset)
+}

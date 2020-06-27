@@ -7,8 +7,8 @@ import (
 )
 
 type Parser interface {
-	ParseAll() ([](*field.IfdField), error)
-	ParseTag(id tags.TagId) (*field.IfdField, error)
+	ParseAll() ([](*field.Field), error)
+	ParseTag(id tags.TagId) (*field.Field, error)
 }
 
 type BasicExifParser struct {

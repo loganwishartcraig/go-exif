@@ -29,12 +29,14 @@ func main() {
 	appMarker, err := reader.LoadApp1Marker()
 	check(err)
 
+	fmt.Println(appMarker)
+
 	exifReader, err := exif.NewBasicExifReader(appMarker)
 	check(err)
 
 	fmt.Println(exifReader)
 
-	ifdField, err := ifd.NewIfd(exifReader, exifReader.ByteOrder)
+	ifdField, err := ifd.NewIfd(exifReader, exifReader.ByteOrder, exifReader.ZerothIfdOffset)
 	check(err)
 
 	fmt.Println(ifdField)
