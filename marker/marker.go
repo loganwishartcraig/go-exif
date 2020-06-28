@@ -5,81 +5,104 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"os"
+)
+
+type Id []byte
+
+var (
+	AppMarker0Id Id = []byte{0xff, 0xe0}
+	AppMarker1Id    = []byte{0xff, 0xe1}
 )
 
 type Marker struct {
-	Id     []byte
-	Length uint16
-	Offset int64
-	reader *bytes.Reader
-}
-
-type Reader interface {
-	Read(b []byte) (int, error)
-	ReadAt(b []byte, offset int64) (int, error)
-	Seek(offset int64, whence int) (int64, error)
-}
-
-func NewMarker(f *os.File, offset int64) (*Marker, error) {
-
-	markerMeta := make([]byte, 4)
-
-	if _, err := f.ReadAt(markerMeta, offset); err != nil {
-		return nil, err
-	}
-
-	id := markerMeta[0:2]
-	lengthBytes := markerMeta[2:4]
-	length := binary.BigEndian.Uint16(lengthBytes)
-
-	if !isValidAppMarkerId(id) {
-		return nil, errors.New(fmt.Sprintf("Invalid AppMarker ID <0x%x> at given offset %d", id, offset))
-	}
-
-	markerContents := make([]byte, int(length)-len(lengthBytes))
-	markerContentOffset := offset + int64(len(markerMeta))
-
-	if _, err := f.ReadAt(markerContents, markerContentOffset); err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("Marker offset: <0x%x>\n", markerContentOffset)
-	fmt.Printf("First bytes preview: <0x%x>\n", markerContents[0:10])
-
-	reader := bytes.NewReader(markerContents)
-
-	return &Marker{
-		id,
-		length,
-		offset,
-		reader,
-	}, nil
-
-}
-
-func isValidAppMarkerId(bytePair []byte) bool {
-
-	if len(bytePair) != 2 {
-		return false
-	}
-
-	return bytePair[0] == 0xff && bytePair[1] >= 0xe0 && bytePair[1] <= 0xe9
-
+	Id       Id
+	Contents []byte
 }
 
 func (m *Marker) String() string {
-	return fmt.Sprintf("Marker: <0x%x> - length %d - offset <0x%x>", m.Id, m.Length, m.Offset)
+	return fmt.Sprintf("Marker ID: %x \t Length: %d", m.Id, len(m.Contents))
 }
 
-func (m *Marker) Read(b []byte) (int, error) {
-	return m.reader.Read(b)
+type Loader interface {
+	LoadAll() ([]*Marker, error)
+	Load(id Id) (*Marker, error)
 }
 
-func (m *Marker) ReadAt(b []byte, offset int64) (int, error) {
-	return m.reader.ReadAt(b, offset)
+type JpegLoader struct {
+	contents []byte
 }
 
-func (m *Marker) Seek(offset int64, whence int) (int64, error) {
-	return m.reader.Seek(offset, whence)
+func NewJpegLoader(contents []byte) *JpegLoader {
+
+	// Loader content will just ignore SOI
+	return &JpegLoader{contents[2:]}
+
+}
+
+func (l *JpegLoader) LoadAll() ([]*Marker, error) {
+	return nil, errors.New("Not implemented")
+}
+
+func (l *JpegLoader) Load(id Id) (*Marker, error) {
+
+	markerOffset, err := l.findMarkerOffset(id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return l.loadAtOffset(markerOffset)
+
+}
+
+func (l *JpegLoader) findMarkerOffset(id Id) (int, error) {
+
+	currentOffset := 0
+	var currentMarkerId []byte
+
+	for currentOffset < len(l.contents)-2 {
+
+		currentMarkerId = l.contents[currentOffset : currentOffset+2]
+
+		fmt.Printf("Finding Marker... current offset %d - ID: %x\n", currentOffset, currentMarkerId)
+
+		if bytes.Equal(currentMarkerId, id) {
+			return currentOffset, nil
+		}
+
+		// Skip ID field
+		currentOffset += 2
+
+		// Get marker length
+		markerLen := l.contents[currentOffset : currentOffset+2]
+
+		// Skip marker
+		currentOffset += int(binary.BigEndian.Uint16(markerLen))
+
+	}
+
+	return -1, errors.New(fmt.Sprintf("Marker ID %x not found", id))
+
+}
+
+func (l *JpegLoader) loadAtOffset(offset int) (*Marker, error) {
+
+	reader := bytes.NewReader(l.contents[offset:])
+
+	markerId := make([]byte, 2)
+	var contentLength uint16
+
+	if _, err := reader.Read(markerId); err != nil {
+		return nil, err
+	} else if err := binary.Read(reader, binary.BigEndian, &contentLength); err != nil {
+		return nil, err
+	}
+
+	contents := l.contents[offset+4 : offset+4+int(contentLength)]
+
+	return &Marker{
+		Id:       l.contents[offset : offset+2],
+		Contents: contents,
+	}, nil
+
 }

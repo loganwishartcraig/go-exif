@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 
-	exif "github.com/loganwishartcraig/go-exif/exif/reader"
-	"github.com/loganwishartcraig/go-exif/ifd"
+	// exif "github.com/loganwishartcraig/go-exif/exif/reader"
+	// "github.com/loganwishartcraig/go-exif/ifd"
+	"github.com/loganwishartcraig/go-exif/marker"
 	"github.com/loganwishartcraig/go-exif/reader/jpeg"
 )
 
@@ -20,27 +20,75 @@ func check(err error) {
 
 func main() {
 
-	f, err := os.Open(filename)
+	content, err := jpeg.ReadFile(filename)
 	check(err)
 
-	reader, err := jpeg.NewJpegReader(f)
+	markerLoader := marker.NewJpegLoader(content)
+
+	marker, err := markerLoader.Load(marker.AppMarker1Id)
 	check(err)
 
-	appMarker, err := reader.LoadApp1Marker()
-	check(err)
+	fmt.Println(marker)
 
-	fmt.Println(appMarker)
+	// f, err := os.Open(filename)
 
-	exifReader, err := exif.NewBasicExifReader(appMarker)
-	check(err)
+	// reader, err := jpeg.NewJpegReader(f)
+	// check(err)
 
-	fmt.Println(exifReader)
+	// appMarker, err := reader.LoadApp1Marker()
+	// check(err)
 
-	ifdField, err := ifd.NewIfd(exifReader, exifReader.ByteOrder, exifReader.ZerothIfdOffset)
-	check(err)
+	// fmt.Println(appMarker)
 
-	fmt.Println(ifdField)
+	// exifReader, err := exif.NewBasicExifReader(appMarker)
+	// check(err)
+
+	// fmt.Println(exifReader)
+
+	// ifdField, err := ifd.NewIfd(exifReader, exifReader.ByteOrder, exifReader.ZerothIfdOffset)
+	// check(err)
+
+	// fmt.Println(ifdField)
 	// _, err = exifParser.ParseAll()
 	// check(err)
 
 }
+
+// Open jpeg as a byte array
+
+// -- IF JPEG --
+// [x] - validate SOI marker
+
+// [ ] ingest APP0 if present
+
+// [ ] ingest APP1
+//     - Marker
+//     - Length
+//     - Identifier
+//     - slice of entire APP1 body contents
+
+// [ ] parse APP1 body into App1Body
+// 	   - ByteOrder
+//	   - 0th IFD Offset
+//     - slice of body containing all content after header (starting at 0th ifd offset)
+// -- END IF JPEG --
+
+// [ ] parse App1Body into IFDTable(s)
+//     - TableOffset
+//     - ByteOrder
+//     - fields
+//         - TagId
+//         - Type
+//         - Count
+//         - ValueOffset
+
+// [ ] process IFDTable fields in conjunction with App1Body
+// to produce an ExifDataTable
+//      - map[TagId]ExifField
+//          - TagId
+//          - Name
+//          - Value ({}interface)
+// [ ] ExifField implemented based on TagId and Type.
+//		- ExifByteField
+//		- ExifStringField
+//		- Etc...
